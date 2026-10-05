@@ -6,8 +6,17 @@ Génère :
 """
 
 import os
+import sys
 import zipfile
 import re
+
+# Forcer l'encodage UTF-8 pour la console Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 def build_portable():
     base_dir = os.path.dirname(os.path.abspath(__file__))

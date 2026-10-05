@@ -11,6 +11,14 @@ import sys
 import subprocess
 from datetime import datetime
 
+# Forcer l'encodage UTF-8 pour la console Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 local_app_data = os.environ.get("LOCALAPPDATA", "")
 program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
 
