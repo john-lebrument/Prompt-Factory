@@ -2,12 +2,14 @@
 
 Bienvenue dans **Prompt Factory**, votre atelier modulaire pour concevoir, stocker et assembler vos briques de prompts réutilisables.
 
+🌐 **Tester directement en ligne :** [https://john-lebrument.github.io/Prompt-Factory/](https://john-lebrument.github.io/Prompt-Factory/)
+
 ---
 
-## 🚀 Comment lancer l'application ?
+## 🚀 Comment lancer l'application en local ?
 
 Vous avez deux méthodes très simples :
-1. **Méthode 1 (Le plus simple) :** Double-cliquez sur le fichier `Lancer Prompt Factory.bat`.
+1. **Méthode 1 (Le plus simple sous Windows) :** Double-cliquez sur le fichier `Lancer Prompt Factory.bat`.
 2. **Méthode 2 :** Double-cliquez directement sur le fichier `index.html`.
 
 L'application s'ouvre immédiatement dans votre navigateur habituel (Edge, Chrome, Firefox, Brave...). **Aucune installation de logiciel n'est nécessaire.**
