@@ -1,0 +1,14 @@
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+
+# IDEs & Agents
+.vscode/
+.idea/
+.gemini/
+
+# Scratch & Logs
+*.log
+__pycache__/
