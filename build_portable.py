@@ -54,11 +54,20 @@ def build_portable():
     )
 
     standalone_path = os.path.join(portable_dir, "PromptFactory-Standalone.html")
-    with open(standalone_path, "w", encoding="utf-8") as f:
-        f.write(html_standalone)
-    print(f"[OK] Fichier autonome créé : {standalone_path}")
+    has_html_changed = True
+    if os.path.exists(standalone_path):
+        with open(standalone_path, "r", encoding="utf-8") as f:
+            if f.read() == html_standalone:
+                has_html_changed = False
 
-    # 2. Génération de l'archive ZIP portable
+    if has_html_changed:
+        with open(standalone_path, "w", encoding="utf-8") as f:
+            f.write(html_standalone)
+        print(f"[OK] Fichier autonome actualisé : {standalone_path}")
+    else:
+        print(f"[INFO] Fichier autonome déjà à jour.")
+
+    # 2. Génération de l'archive ZIP portable (uniquement si nécessaire)
     zip_path = os.path.join(portable_dir, "PromptFactory-Portable.zip")
     files_to_pack = [
         "index.html",
@@ -68,18 +77,29 @@ def build_portable():
         "README.md"
     ]
 
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for file_name in files_to_pack:
-            file_path = os.path.join(base_dir, file_name)
-            if os.path.exists(file_path):
-                # Ajouter dans un dossier racine propre dans le ZIP
-                arcname = os.path.join("PromptFactory", file_name)
-                zf.write(file_path, arcname)
+    zip_needed = not os.path.exists(zip_path) or has_html_changed
+    if not zip_needed:
+        zip_mtime = os.path.getmtime(zip_path)
+        for fn in files_to_pack:
+            fp = os.path.join(base_dir, fn)
+            if os.path.exists(fp) and os.path.getmtime(fp) > zip_mtime:
+                zip_needed = True
+                break
 
-        # Ajouter aussi le standalone dans le zip
-        zf.write(standalone_path, os.path.join("PromptFactory", "PromptFactory-Standalone.html"))
+    if zip_needed:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for file_name in files_to_pack:
+                file_path = os.path.join(base_dir, file_name)
+                if os.path.exists(file_path):
+                    arcname = os.path.join("PromptFactory", file_name)
+                    zf.write(file_path, arcname)
 
-    print(f"[OK] Archive ZIP portable créée : {zip_path}")
+            if os.path.exists(standalone_path):
+                zf.write(standalone_path, os.path.join("PromptFactory", "PromptFactory-Standalone.html"))
+        print(f"[OK] Archive ZIP portable actualisée : {zip_path}")
+    else:
+        print(f"[INFO] Archive ZIP déjà à jour.")
+
     return standalone_path, zip_path
 
 if __name__ == "__main__":
