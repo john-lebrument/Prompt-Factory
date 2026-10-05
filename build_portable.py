@@ -1,16 +1,11 @@
-"""
-Script de génération de la version portable de Prompt Factory
-Génère :
-1. portable/PromptFactory-Standalone.html (Fichier HTML unique avec CSS et JS intégrés)
-2. portable/PromptFactory-Portable.zip (Archive complète prête à l'emploi)
-"""
+"""Generate the self-contained and ZIP versions of Prompt Factory."""
 
-import os
+import html as html_module
+import re
 import sys
 import zipfile
-import re
+from pathlib import Path
 
-# Forcer l'encodage UTF-8 pour la console Windows
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -18,89 +13,106 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+ROOT = Path(__file__).resolve().parent
+PORTABLE_DIR = ROOT / "portable"
+
+
+def read_text(path):
+    return path.read_text(encoding="utf-8")
+
+
+def replace_once(html, pattern, replacement, label):
+    updated, count = re.subn(pattern, lambda _: replacement, html, count=1, flags=re.IGNORECASE | re.DOTALL)
+    if count != 1:
+        raise RuntimeError(f"Impossible d'intégrer {label} : balise source absente ou dupliquée.")
+    return updated
+
+
 def build_portable():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    portable_dir = os.path.join(base_dir, "portable")
-    os.makedirs(portable_dir, exist_ok=True)
+    PORTABLE_DIR.mkdir(parents=True, exist_ok=True)
+    standalone_path = PORTABLE_DIR / "PromptFactory-Standalone.html"
+    zip_path = PORTABLE_DIR / "PromptFactory-Portable.zip"
 
-    # 1. Génération du fichier HTML autonome unique (inlined CSS + JS)
-    index_path = os.path.join(base_dir, "index.html")
-    styles_path = os.path.join(base_dir, "styles.css")
-    app_path = os.path.join(base_dir, "app.js")
+    html = read_text(ROOT / "index.html")
+    for css_name in ("vendor/tailwind.min.css", "styles.css"):
+        css_path = ROOT / css_name
+        if not css_path.is_file():
+            raise FileNotFoundError(f"Dépendance locale absente : {css_name}")
+        style_tag = f"<style>\n{read_text(css_path)}\n</style>"
+        pattern = rf'<link\s+rel="stylesheet"\s+href="{re.escape(css_name)}"\s*/?>'
+        html = replace_once(html, pattern, style_tag, css_name)
 
-    with open(index_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
+    for js_name in ("vendor/lucide.min.js", "app.js"):
+        js_path = ROOT / js_name
+        if not js_path.is_file():
+            raise FileNotFoundError(f"Dépendance locale absente : {js_name}")
+        js = read_text(js_path)
+        # Prevent a string in a library from prematurely closing an inline script.
+        js = re.sub(r"</script", r"<\\/script", js, flags=re.IGNORECASE)
+        script_tag = f"<script>\n{js}\n</script>"
+        pattern = rf'<script\s+src="{re.escape(js_name)}"\s*>\s*</script>'
+        html = replace_once(html, pattern, script_tag, js_name)
 
-    with open(styles_path, "r", encoding="utf-8") as f:
-        css_content = f.read()
-
-    with open(app_path, "r", encoding="utf-8") as f:
-        js_content = f.read()
-
-    # Remplacer le lien vers styles.css par la balise <style>
-    style_tag = f"<style>\n{css_content}\n</style>"
-    html_standalone = re.sub(
-        r'<link\s+rel="stylesheet"\s+href="styles\.css"\s*\/?>',
-        lambda _: style_tag,
-        html_content
+    legal_texts = (
+        ("project-license-text", "LICENSE"),
+        ("third-party-license-notices", "THIRD_PARTY_NOTICES.md"),
     )
+    legal_templates = "\n<!-- License texts are embedded to preserve notices in the offline single-file distribution. -->\n"
+    for template_id, file_name in legal_texts:
+        legal_path = ROOT / file_name
+        if not legal_path.is_file():
+            raise FileNotFoundError(f"Notice de licence absente : {file_name}")
+        escaped_text = html_module.escape(read_text(legal_path), quote=False)
+        legal_templates += f'<template id="{template_id}"><pre>{escaped_text}</pre></template>\n'
+    html = replace_once(html, r'</body>', legal_templates + '</body>', 'textes de licence')
 
-    # Remplacer la balise script app.js par le script complet
-    script_tag = f"<script>\n{js_content}\n</script>"
-    html_standalone = re.sub(
-        r'<script\s+src="app\.js"\s*><\/script>',
-        lambda _: script_tag,
-        html_standalone
+    remote_assets = re.findall(
+        r'<(?:script|link)\b[^>]*(?:src|href)=["\']https?://[^"\']+["\']',
+        html,
+        flags=re.IGNORECASE,
     )
+    if remote_assets:
+        raise RuntimeError(f"La version autonome contient encore des dépendances distantes : {remote_assets}")
 
-    standalone_path = os.path.join(portable_dir, "PromptFactory-Standalone.html")
-    has_html_changed = True
-    if os.path.exists(standalone_path):
-        with open(standalone_path, "r", encoding="utf-8") as f:
-            if f.read() == html_standalone:
-                has_html_changed = False
-
-    if has_html_changed:
-        with open(standalone_path, "w", encoding="utf-8") as f:
-            f.write(html_standalone)
+    old_html = standalone_path.read_text(encoding="utf-8") if standalone_path.exists() else None
+    html_changed = old_html != html
+    if html_changed:
+        standalone_path.write_text(html, encoding="utf-8", newline="\n")
         print(f"[OK] Fichier autonome actualisé : {standalone_path}")
     else:
-        print(f"[INFO] Fichier autonome déjà à jour.")
+        print("[INFO] Fichier autonome déjà à jour.")
 
-    # 2. Génération de l'archive ZIP portable (uniquement si nécessaire)
-    zip_path = os.path.join(portable_dir, "PromptFactory-Portable.zip")
     files_to_pack = [
         "index.html",
         "app.js",
         "styles.css",
+        "vendor/tailwind.min.css",
+        "vendor/lucide.min.js",
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
         "Lancer Prompt Factory.bat",
-        "README.md"
+        "README.md",
     ]
+    missing = [name for name in files_to_pack if not (ROOT / name).is_file()]
+    if missing:
+        raise FileNotFoundError(f"Fichiers requis pour l'archive absents : {', '.join(missing)}")
 
-    zip_needed = not os.path.exists(zip_path) or has_html_changed
+    zip_needed = not zip_path.exists() or html_changed
     if not zip_needed:
-        zip_mtime = os.path.getmtime(zip_path)
-        for fn in files_to_pack:
-            fp = os.path.join(base_dir, fn)
-            if os.path.exists(fp) and os.path.getmtime(fp) > zip_mtime:
-                zip_needed = True
-                break
+        zip_mtime = zip_path.stat().st_mtime
+        zip_needed = any((ROOT / name).stat().st_mtime > zip_mtime for name in files_to_pack)
 
     if zip_needed:
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for file_name in files_to_pack:
-                file_path = os.path.join(base_dir, file_name)
-                if os.path.exists(file_path):
-                    arcname = os.path.join("PromptFactory", file_name)
-                    zf.write(file_path, arcname)
-
-            if os.path.exists(standalone_path):
-                zf.write(standalone_path, os.path.join("PromptFactory", "PromptFactory-Standalone.html"))
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            for name in files_to_pack:
+                archive.write(ROOT / name, (Path("PromptFactory") / name).as_posix())
+            archive.write(standalone_path, "PromptFactory/PromptFactory-Standalone.html")
         print(f"[OK] Archive ZIP portable actualisée : {zip_path}")
     else:
-        print(f"[INFO] Archive ZIP déjà à jour.")
+        print("[INFO] Archive ZIP déjà à jour.")
 
-    return standalone_path, zip_path
+    return str(standalone_path), str(zip_path)
+
 
 if __name__ == "__main__":
     build_portable()

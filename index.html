@@ -6,29 +6,11 @@
   <title>Prompt Factory 🏭 - Atelier Modulaire de Prompts</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Bibliothèque CSS générée et conservée localement -->
+  <link rel="stylesheet" href="vendor/tailwind.min.css">
 
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Icônes Lucide locales, versionnée avec le projet -->
+  <script src="vendor/lucide.min.js"></script>
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="styles.css">
@@ -108,6 +90,9 @@
           <i data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
           <span class="hidden sm:inline">Mode</span>
         </button>
+
+        <!-- Informations de licence et notices tierces -->
+        <button id="licenseInfoBtn" type="button" title="Afficher les licences" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium">Licences</button>
       </div>
 
     </div>
@@ -339,6 +324,19 @@
   <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
     <!-- Toasts injectés en JavaScript -->
   </div>
+
+  <section id="licenseInfoPanel" class="hidden fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="licenseInfoTitle">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6">
+      <div class="flex items-center justify-between gap-4 mb-5">
+        <h2 id="licenseInfoTitle" class="text-lg font-bold text-slate-900 dark:text-white">Licences</h2>
+        <button id="licenseInfoClose" type="button" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Fermer">Fermer</button>
+      </div>
+      <h3 class="font-semibold mb-2">Prompt Factory — GPL-3.0-or-later</h3>
+      <pre id="projectLicenseDisplay" class="whitespace-pre-wrap break-words text-xs max-h-64 overflow-y-auto p-3 rounded-lg bg-slate-50 dark:bg-slate-950"></pre>
+      <h3 class="font-semibold mt-5 mb-2">Bibliothèques tierces</h3>
+      <pre id="thirdPartyLicenseDisplay" class="whitespace-pre-wrap break-words text-xs max-h-64 overflow-y-auto p-3 rounded-lg bg-slate-50 dark:bg-slate-950"></pre>
+    </div>
+  </section>
 
   <!-- Scripts -->
   <script src="app.js"></script>

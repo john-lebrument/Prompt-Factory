@@ -69,10 +69,12 @@ class PromptFactoryApp {
       const saved = localStorage.getItem(this.storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        this.state.blocks = Array.isArray(parsed.blocks) && parsed.blocks.length > 0 
-          ? parsed.blocks 
-          : DEFAULT_BLOCKS;
-        this.state.selectedIds = Array.isArray(parsed.selectedIds) ? parsed.selectedIds : ['blk-1', 'blk-2'];
+        this.state.blocks = this.sanitizeBlocks(parsed.blocks);
+        if (this.state.blocks.length === 0) this.state.blocks = [...DEFAULT_BLOCKS];
+        const safeIds = new Set(this.state.blocks.map(block => block.id));
+        this.state.selectedIds = Array.isArray(parsed.selectedIds)
+          ? parsed.selectedIds.filter(id => typeof id === 'string' && safeIds.has(id))
+          : ['blk-1', 'blk-2'];
         this.state.separator = parsed.separator || 'double';
       } else {
         this.state.blocks = [...DEFAULT_BLOCKS];
@@ -139,7 +141,7 @@ class PromptFactoryApp {
 
   createBlock(title, content) {
     const newBlock = {
-      id: 'blk-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      id: this.createBlockId(this.state.blocks.map(block => block.id)),
       title: title.trim() || 'Sans titre',
       content: content.trim(),
       createdAt: Date.now()
@@ -169,7 +171,7 @@ class PromptFactoryApp {
     if (!original) return;
 
     const copy = {
-      id: 'blk-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      id: this.createBlockId(this.state.blocks.map(block => block.id)),
       title: `${original.title} (Copie)`,
       content: original.content,
       createdAt: Date.now()
@@ -351,7 +353,10 @@ class PromptFactoryApp {
         const imported = JSON.parse(e.target.result);
         if (Array.isArray(imported)) {
           // Valider et fusionner
-          const validBlocks = imported.filter(b => b && typeof b.title === 'string' && typeof b.content === 'string');
+          const validBlocks = this.sanitizeBlocks(
+            imported,
+            this.state.blocks.map(block => block.id)
+          );
           if (validBlocks.length === 0) {
             alert("Aucun bloc valide trouvé dans le fichier.");
             return;
@@ -557,7 +562,7 @@ class PromptFactoryApp {
           </div>
           <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200 mb-1">Aucun bloc trouvé</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-5">
-            ${this.state.searchQuery ? `Aucun résultat pour "${this.state.searchQuery}". Essayez un autre mot-clé.` : 'Votre bibliothèque est vide. Créez votre première brique de prompt !'}
+            ${this.state.searchQuery ? `Aucun résultat pour "${this.escapeHtml(this.state.searchQuery)}". Essayez un autre mot-clé.` : 'Votre bibliothèque est vide. Créez votre première brique de prompt !'}
           </p>
           <button onclick="app.openModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-md transition-all">
             <i data-lucide="plus" class="w-4 h-4"></i>
@@ -765,6 +770,58 @@ class PromptFactoryApp {
   /* ----------------- GESTIONNAIRES D'ÉVÉNEMENTS ----------------- */
 
   bindEvents() {
+    const licensePanel = document.getElementById('licenseInfoPanel');
+    const licenseButton = document.getElementById('licenseInfoBtn');
+    const closeLicenseButton = document.getElementById('licenseInfoClose');
+    const projectLicenseTemplate = document.getElementById('project-license-text');
+    const thirdPartyLicenseTemplate = document.getElementById('third-party-license-notices');
+    const projectLicenseDisplay = document.getElementById('projectLicenseDisplay');
+    const thirdPartyLicenseDisplay = document.getElementById('thirdPartyLicenseDisplay');
+
+    if (licensePanel && licenseButton && closeLicenseButton && projectLicenseTemplate && thirdPartyLicenseTemplate && projectLicenseDisplay && thirdPartyLicenseDisplay) {
+      projectLicenseDisplay.textContent = projectLicenseTemplate.content.textContent;
+      thirdPartyLicenseDisplay.textContent = thirdPartyLicenseTemplate.content.textContent;
+      const closeLicensePanel = () => {
+        licensePanel.classList.add('hidden');
+        licensePanel.classList.remove('flex');
+        licenseButton.focus();
+      };
+      const focusableSelectors = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      licenseButton.addEventListener('click', () => {
+        licensePanel.classList.remove('hidden');
+        licensePanel.classList.add('flex');
+        closeLicenseButton.focus();
+      });
+      closeLicenseButton.addEventListener('click', closeLicensePanel);
+      licensePanel.addEventListener('click', event => {
+        if (event.target === licensePanel) closeLicensePanel();
+      });
+      document.addEventListener('keydown', event => {
+        if (licensePanel.classList.contains('hidden')) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeLicensePanel();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const focusable = [...licensePanel.querySelectorAll(focusableSelectors)];
+        if (focusable.length === 0) {
+          event.preventDefault();
+          licensePanel.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !licensePanel.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !licensePanel.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+    }
+
     // Recherche en temps réel
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -822,6 +879,40 @@ class PromptFactoryApp {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  createBlockId(reservedIds = []) {
+    const usedIds = new Set(reservedIds);
+    const baseId = `blk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    let id = baseId;
+    let suffix = 0;
+    while (usedIds.has(id)) id = `${baseId}-${++suffix}`;
+    return id;
+  }
+
+  sanitizeBlocks(blocks, reservedIds = []) {
+    if (!Array.isArray(blocks)) return [];
+
+    const safeIdPattern = /^blk-[A-Za-z0-9_-]{1,120}$/;
+    const usedIds = new Set(reservedIds.filter(id => typeof id === 'string' && safeIdPattern.test(id)));
+    const createSafeId = () => this.createBlockId(usedIds);
+
+    return blocks
+      .filter(block => block && typeof block.title === 'string' && typeof block.content === 'string')
+      .map(block => {
+        let id = typeof block.id === 'string' && safeIdPattern.test(block.id) && !usedIds.has(block.id)
+          ? block.id
+          : createSafeId();
+        while (usedIds.has(id)) id = createSafeId();
+        usedIds.add(id);
+        return {
+          id,
+          title: block.title,
+          content: block.content,
+          createdAt: Number.isFinite(block.createdAt) ? block.createdAt : Date.now(),
+          ...(Number.isFinite(block.updatedAt) ? { updatedAt: block.updatedAt } : {}),
+        };
+      });
   }
 }
 

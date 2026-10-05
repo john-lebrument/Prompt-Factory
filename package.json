@@ -1,0 +1,15 @@
+{
+  "name": "prompt-factory",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Build and test scripts for Prompt Factory",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/tailwind.css -o ./vendor/tailwind.min.css --minify",
+    "test": "node --test tests/*.test.js && python -m unittest discover -s tests -v"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.0",
+    "lucide": "0.468.0",
+    "tailwindcss": "4.3.0"
+  }
+}

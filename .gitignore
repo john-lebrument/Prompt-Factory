@@ -12,3 +12,6 @@ $RECYCLE.BIN/
 # Scratch & Logs
 *.log
 __pycache__/
+node_modules/
+coverage/
+npm-debug.log*

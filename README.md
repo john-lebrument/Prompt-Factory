@@ -42,11 +42,18 @@ L'application s'ouvre immédiatement dans votre navigateur habituel (Edge, Chrom
 
 ---
 
+## ⚖️ Licence
+
+Le code original de Prompt Factory est distribué sous **GNU GPL version 3 ou toute version ultérieure** (`GPL-3.0-or-later`), conformément au fichier [`LICENSE`](LICENSE). Les bibliothèques tierces intégrées conservent leurs licences propres, détaillées dans [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+---
+
 ## 🎒 Version Portable
 
-Pour utiliser Prompt Factory partout sans aucune installation :
-* **Fichier autonome unique** : [`portable/PromptFactory-Standalone.html`](portable/PromptFactory-Standalone.html) regroupe l'application complète dans un seul fichier HTML que vous pouvez emporter sur clé USB et lancer sur n'importe quel ordinateur.
-* **Archive ZIP complète** : [`portable/PromptFactory-Portable.zip`](portable/PromptFactory-Portable.zip) contient l'ensemble des fichiers prêts à l'emploi.
+Pour utiliser Prompt Factory sans installer de logiciel :
+* **Fichier autonome unique** : [`portable/PromptFactory-Standalone.html`](portable/PromptFactory-Standalone.html) intègre le HTML, le CSS, les icônes et le JavaScript dans un seul fichier. Après téléchargement, il peut être ouvert sans connexion Internet.
+* **Archive ZIP complète** : [`portable/PromptFactory-Portable.zip`](portable/PromptFactory-Portable.zip) contient les fichiers et bibliothèques locales nécessaires, ainsi que les notices de licences tierces.
+* La version en ligne et la version locale utilisent les bibliothèques CSS et icônes conservées dans le dépôt ; aucune police, feuille de style ou bibliothèque d'icônes n'est chargée depuis un CDN.
 
 ---
 
@@ -61,3 +68,20 @@ Pour utiliser Prompt Factory partout sans aucune installation :
 ---
 
 *Conçu pour une productivité maximale avec les modèles de langage actuels.*
+
+---
+
+## 🛠️ Tests et reconstruction
+
+Pour régénérer la feuille CSS et les fichiers portables, installer Node.js et Python, puis lancer à la racine du projet :
+
+```bash
+npm ci
+npm run build:css
+python build_portable.py
+npm test
+```
+
+Les dépendances de développement sont verrouillées dans `package-lock.json`. Les licences des bibliothèques intégrées sont détaillées dans [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+Le script **Mettre à jour GitHub** affiche les changements, demande une première confirmation, puis réaffiche la liste effectivement préparée avant de demander une seconde confirmation pour le commit et le push vers le dépôt public. Il recontrôle le contenu exact du commit et vérifie que `origin/main` n’a pas changé avant l’envoi ; après le push, il relit la référence distante pour confirmer le résultat. En cas d’annulation ou de divergence, aucun changement inattendu n’est envoyé. Si la seconde étape est annulée, les fichiers restent préparés localement, mais aucun commit ni push n’est effectué.
